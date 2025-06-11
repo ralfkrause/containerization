@@ -50,7 +50,7 @@ extension EXT4.EXT4Reader {
             var attributes: [EXT4.ExtendedAttribute] = []
             let buffer: [UInt8] = EXT4.tupleToArray(inode.inlineXattrs)
             if !buffer.allZeros {
-                try attributes.append(contentsOf: Self.readInlineExtenedAttributes(from: buffer))
+                try attributes.append(contentsOf: Self.readInlineExtendedAttributes(from: buffer))
             }
             if inode.xattrBlockLow != 0 {
                 let block = inode.xattrBlockLow
@@ -58,7 +58,7 @@ extension EXT4.EXT4Reader {
                 guard let buffer = try self.handle.read(upToCount: Int(self.blockSize)) else {
                     throw EXT4.Error.couldNotReadBlock(block)
                 }
-                try attributes.append(contentsOf: Self.readBlockExtenedAttributes(from: [UInt8](buffer)))
+                try attributes.append(contentsOf: Self.readBlockExtendedAttributes(from: [UInt8](buffer)))
             }
 
             var xattrs: [String: Data] = [:]
@@ -165,7 +165,12 @@ extension EXT4.EXT4Reader {
         try writer.finishEncoding()
     }
 
+    @available(*, deprecated, renamed: "readInlineExtendedAttributes(from:)")
     public static func readInlineExtenedAttributes(from buffer: [UInt8]) throws -> [EXT4.ExtendedAttribute] {
+        try readInlineExtendedAttributes(from: buffer)
+    }
+
+    public static func readInlineExtendedAttributes(from buffer: [UInt8]) throws -> [EXT4.ExtendedAttribute] {
         let header = UInt32(littleEndian: buffer[0...4].withUnsafeBytes { $0.load(as: UInt32.self) })
         if header != EXT4.XAttrHeaderMagic {
             throw EXT4.FileXattrsState.Error.missingXAttrHeader
@@ -173,7 +178,12 @@ extension EXT4.EXT4Reader {
         return try EXT4.FileXattrsState.read(buffer: buffer, start: 4, offset: 4)
     }
 
+    @available(*, deprecated, renamed: "readBlockExtendedAttributes(from:)")
     public static func readBlockExtenedAttributes(from buffer: [UInt8]) throws -> [EXT4.ExtendedAttribute] {
+        try readBlockExtendedAttributes(from: buffer)
+    }
+
+    public static func readBlockExtendedAttributes(from buffer: [UInt8]) throws -> [EXT4.ExtendedAttribute] {
         let header = UInt32(littleEndian: buffer[0...4].withUnsafeBytes { $0.load(as: UInt32.self) })
         if header != EXT4.XAttrHeaderMagic {
             throw EXT4.FileXattrsState.Error.missingXAttrHeader
