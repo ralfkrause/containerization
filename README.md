@@ -12,7 +12,7 @@ Containerization provides APIs to:
 - [Create an optimized Linux kernel for fast boot times](./kernel/).
 - [Spawn lightweight virtual machines and manage the runtime environment](./Sources/Containerization/LinuxContainer.swift).
 - [Spawn and interact with containerized processes](./Sources/Containerization/LinuxProcess.swift).
-- Use Rosetta 2 for running linux/amd64 containers on Apple Silicon.
+- Use Rosetta 2 for running linux/amd64 containers on Apple silicon.
 
 Please view the [API documentation](https://apple.github.io/containerization/documentation/) for information on the Swift packages that Containerization provides.
 
@@ -31,8 +31,8 @@ You need an Apple silicon Mac to build and run Containerization.
 
 To build the Containerization package, your system needs either:
 
-- macOS 15 or newer and Xcode 26 Beta
-- macOS 26 Beta 1 or newer
+- macOS 15 or newer and Xcode 26 beta
+- macOS 26 beta or newer
 
 Applications built using the package will run on macOS 15 or later, but the following features are not available on macOS 15:
 
