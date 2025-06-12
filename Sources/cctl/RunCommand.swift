@@ -84,7 +84,7 @@ extension Application {
                 kernel: kernel,
                 initPath: .init(filePath: initBlock)
             )
-            let sigwinch = setupSigwinchHandler()
+            let sigwinchStream = AsyncSignalHandler.create(notify: [SIGWINCH])
 
             let current = try Terminal.current
             try current.setraw()
@@ -139,7 +139,7 @@ extension Application {
 
             try await withThrowingTaskGroup(of: Void.self) { group in
                 group.addTask {
-                    for await _ in sigwinch {
+                    for await _ in sigwinchStream.signals {
                         try await container.resize(to: try current.size)
                     }
                 }
@@ -149,17 +149,6 @@ extension Application {
 
                 try await container.stop()
             }
-        }
-
-        private func setupSigwinchHandler() -> AsyncStream<Void> {
-            let sigwinch = DispatchSource.makeSignalSource(signal: SIGWINCH)
-            let stream = AsyncStream<Void> { cont in
-                sigwinch.setEventHandler {
-                    cont.yield()
-                }
-            }
-            sigwinch.resume()
-            return stream
         }
 
         private static let appRoot: URL = {
