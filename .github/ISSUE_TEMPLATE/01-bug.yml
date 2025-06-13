@@ -1,4 +1,4 @@
-name: Bug Report
+name: Bug report
 description: File a bug report.
 title: "[Bug]: "
 labels: ["bug", "triage"]
@@ -42,14 +42,14 @@ body:
     attributes:
       label: Environment 
       description: |
-        examples: 
-          - **OS**: MacOS 26 Beta 1
-          - **swift**: Apple Swift version 6.2
-          - **xcode**: Xcode 26 Beta 17A5241e
+        Examples: 
+          - **OS**: macOS 26.0 Beta (25A5279m)
+          - **Swift**: Apple Swift version 6.1 (swift-6.1-RELEASE)
+          - **Xcode**: Version 26.0 beta (17A5241e)
       value: |
         - OS: 
-        - swift: 
-        - xcode: 
+        - Swift: 
+        - Xcode: 
       render: markdown
     validations:
       required: true
@@ -63,7 +63,7 @@ body:
     id: terms
     attributes:
       label: Code of Conduct
-      description: By submitting this issue, you agree to follow our [Code of Conduct](https://github.com/apple/containerization/blob/main/CONTRIBUTING.md#code-of-conduct). 
+      description: By submitting this issue, you agree to follow our [Code of Conduct](https://github.com/apple/.github/blob/main/CODE_OF_CONDUCT.md).
       options:
         - label: I agree to follow this project's Code of Conduct
           required: true
