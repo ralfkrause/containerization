@@ -98,7 +98,7 @@ actor ProcessSupervisor {
 
             return try process.start()
         } catch {
-            self.log?.error("process start failed \(error)")
+            self.log?.error("process start failed \(error)", metadata: ["process-id": "\(process.id)"])
             throw error
         }
     }

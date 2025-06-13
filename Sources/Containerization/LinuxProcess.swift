@@ -94,6 +94,13 @@ public final class LinuxProcess: Sendable {
         var pid: Int32
         var stdio: StdioHandles
         var stdinRelay: Task<(), Never>?
+        var ioTracker: IoTracker?
+
+        struct IoTracker {
+            let stream: AsyncStream<Void>
+            let cont: AsyncStream<Void>.Continuation
+            let configuredStreams: Int
+        }
     }
 
     /// The process ID for the container process. This will be -1
@@ -207,16 +214,18 @@ extension LinuxProcess {
             }
         }
 
+        var configuredStreams = 0
+        let (stream, cc) = AsyncStream<Void>.makeStream()
         if let stdout = self.ioSetup.stdout {
+            configuredStreams += 1
             handles[1]?.readabilityHandler = { handle in
-                // NOTE: We need some way to know when this data is done being piped,
-                // so DispatchGroup or similar. `availableData` is also pretty poor,
-                // as it always allocates. We can likely do the read loop ourselves
-                // with a buffer we allocate once on creation of the process.
                 do {
                     let data = handle.availableData
                     if data.isEmpty {
+                        // This block is called when the producer (the guest) closes
+                        // the fd it is writing into.
                         handles[1]?.readabilityHandler = nil
+                        cc.yield()
                         return
                     }
                     try stdout.writer.write(data)
@@ -227,17 +236,24 @@ extension LinuxProcess {
         }
 
         if let stderr = self.ioSetup.stderr {
+            configuredStreams += 1
             handles[2]?.readabilityHandler = { handle in
                 do {
                     let data = handle.availableData
                     if data.isEmpty {
                         handles[2]?.readabilityHandler = nil
+                        cc.yield()
                         return
                     }
                     try stderr.writer.write(data)
                 } catch {
                     self.logger?.error("failed to write to stderr: \(error)")
                 }
+            }
+        }
+        if configuredStreams > 0 {
+            self.state.withLock {
+                $0.ioTracker = .init(stream: stream, cont: cc, configuredStreams: configuredStreams)
             }
         }
 
@@ -318,11 +334,13 @@ extension LinuxProcess {
     @discardableResult
     public func wait(timeoutInSeconds: Int64? = nil) async throws -> Int32 {
         do {
-            return try await self.agent.waitProcess(
+            let code = try await self.agent.waitProcess(
                 id: self.id,
                 containerID: self.owningContainer,
                 timeoutInSeconds: timeoutInSeconds
             )
+            await self.waitIoComplete()
+            return code
         } catch {
             if error is ContainerizationError {
                 throw error
@@ -335,16 +353,37 @@ extension LinuxProcess {
         }
     }
 
+    /// Wait until the standard output and standard error streams for the process have concluded.
+    private func waitIoComplete() async {
+        let ioTracker = self.state.withLock { $0.ioTracker }
+        guard let ioTracker else {
+            return
+        }
+        do {
+            try await Timeout.run(seconds: 3) {
+                var counter = ioTracker.configuredStreams
+                for await _ in ioTracker.stream {
+                    counter -= 1
+                    if counter == 0 {
+                        ioTracker.cont.finish()
+                        break
+                    }
+                }
+            }
+        } catch {
+            self.logger?.error("Timeout waiting for IO to complete for process \(id): \(error)")
+        }
+        self.state.withLock {
+            $0.ioTracker = nil
+        }
+    }
+
     /// Cleans up guest state and waits on and closes any host resources (stdio handles).
     public func delete() async throws {
         try await self.agent.deleteProcess(
             id: self.id,
             containerID: self.owningContainer
         )
-
-        // FIXME: Add in IO drain waiting here. We can wait for 2-3 seconds or
-        // so and then just continue on.
-
         // Now free up stdio handles.
         try self.state.withLock {
             $0.stdinRelay?.cancel()
