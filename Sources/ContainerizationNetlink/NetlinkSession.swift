@@ -67,12 +67,17 @@ public struct NetlinkSession {
     /// - Parameters:
     ///   - interface: The name of the interface.
     ///   - up: The value to set the interface state to.
-    public func linkSet(interface: String, up: Bool) throws {
+    public func linkSet(interface: String, up: Bool, mtu: UInt32? = nil) throws {
         // ip link set dev [interface] [up|down]
         let interfaceIndex = try getInterfaceIndex(interface)
-        let mtuAttr = RTAttribute(
-            len: UInt16(RTAttribute.size + MemoryLayout<UInt32>.size), type: LinkAttributeType.IFLA_MTU)
-        let requestSize = NetlinkMessageHeader.size + InterfaceInfo.size + mtuAttr.paddedLen
+        // build the attribute only when mtu is supplied
+        let attr: RTAttribute? =
+            (mtu != nil)
+            ? RTAttribute(
+                len: UInt16(RTAttribute.size + MemoryLayout<UInt32>.size),
+                type: LinkAttributeType.IFLA_MTU)
+            : nil
+        let requestSize = NetlinkMessageHeader.size + InterfaceInfo.size + (attr?.paddedLen ?? 0)
         var requestBuffer = [UInt8](repeating: 0, count: requestSize)
         var requestOffset = 0
 
@@ -91,16 +96,16 @@ public struct NetlinkSession {
             change: InterfaceFlags.DEFAULT_CHANGE)
         requestOffset = try requestInfo.appendBuffer(&requestBuffer, offset: requestOffset)
 
-        requestOffset = try mtuAttr.appendBuffer(&requestBuffer, offset: requestOffset)
-        guard
-            let newRequestOffset = requestBuffer.copyIn(
-                as: UInt32.self,
-                value: Self.mtu,
-                offset: requestOffset)
-        else {
-            throw NetlinkDataError.sendMarshalFailure
+        if let attr = attr, let m = mtu {
+            requestOffset = try attr.appendBuffer(&requestBuffer, offset: requestOffset)
+            guard
+                let newRequestOffset =
+                    requestBuffer.copyIn(as: UInt32.self, value: m, offset: requestOffset)
+            else {
+                throw NetlinkDataError.sendMarshalFailure
+            }
+            requestOffset = newRequestOffset
         }
-        requestOffset = newRequestOffset
 
         guard requestOffset == requestSize else {
             throw Error.unexpectedOffset(offset: requestOffset, size: requestSize)

@@ -658,9 +658,20 @@ public struct Com_Apple_Containerization_Sandbox_V3_IpLinkSetRequest: Sendable {
 
   public var up: Bool = false
 
+  public var mtu: UInt32 {
+    get {return _mtu ?? 0}
+    set {_mtu = newValue}
+  }
+  /// Returns true if `mtu` has been explicitly set.
+  public var hasMtu: Bool {return self._mtu != nil}
+  /// Clears the value of `mtu`. Subsequent reads from it will return its default value.
+  public mutating func clearMtu() {self._mtu = nil}
+
   public var unknownFields = SwiftProtobuf.UnknownStorage()
 
   public init() {}
+
+  fileprivate var _mtu: UInt32? = nil
 }
 
 public struct Com_Apple_Containerization_Sandbox_V3_IpLinkSetResponse: Sendable {
@@ -1992,6 +2003,7 @@ extension Com_Apple_Containerization_Sandbox_V3_IpLinkSetRequest: SwiftProtobuf.
   public static let _protobuf_nameMap: SwiftProtobuf._NameMap = [
     1: .same(proto: "interface"),
     2: .same(proto: "up"),
+    3: .same(proto: "mtu"),
   ]
 
   public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
@@ -2002,24 +2014,33 @@ extension Com_Apple_Containerization_Sandbox_V3_IpLinkSetRequest: SwiftProtobuf.
       switch fieldNumber {
       case 1: try { try decoder.decodeSingularStringField(value: &self.interface) }()
       case 2: try { try decoder.decodeSingularBoolField(value: &self.up) }()
+      case 3: try { try decoder.decodeSingularUInt32Field(value: &self._mtu) }()
       default: break
       }
     }
   }
 
   public func traverse<V: SwiftProtobuf.Visitor>(visitor: inout V) throws {
+    // The use of inline closures is to circumvent an issue where the compiler
+    // allocates stack space for every if/case branch local when no optimizations
+    // are enabled. https://github.com/apple/swift-protobuf/issues/1034 and
+    // https://github.com/apple/swift-protobuf/issues/1182
     if !self.interface.isEmpty {
       try visitor.visitSingularStringField(value: self.interface, fieldNumber: 1)
     }
     if self.up != false {
       try visitor.visitSingularBoolField(value: self.up, fieldNumber: 2)
     }
+    try { if let v = self._mtu {
+      try visitor.visitSingularUInt32Field(value: v, fieldNumber: 3)
+    } }()
     try unknownFields.traverse(visitor: &visitor)
   }
 
   public static func ==(lhs: Com_Apple_Containerization_Sandbox_V3_IpLinkSetRequest, rhs: Com_Apple_Containerization_Sandbox_V3_IpLinkSetRequest) -> Bool {
     if lhs.interface != rhs.interface {return false}
     if lhs.up != rhs.up {return false}
+    if lhs._mtu != rhs._mtu {return false}
     if lhs.unknownFields != rhs.unknownFields {return false}
     return true
   }

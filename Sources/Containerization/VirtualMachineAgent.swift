@@ -53,7 +53,7 @@ public protocol VirtualMachineAgent: Sendable {
     func deleteProcess(id: String, containerID: String?) async throws
 
     // Networking
-    func up(name: String) async throws
+    func up(name: String, mtu: UInt32?) async throws
     func down(name: String) async throws
     func addressAdd(name: String, address: String) async throws
     func routeAddDefault(name: String, gateway: String) async throws
