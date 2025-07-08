@@ -622,7 +622,8 @@ extension Initd: Com_Apple_Containerization_Sandbox_V3_SandboxContextAsyncProvid
         do {
             let socket = try DefaultNetlinkSocket()
             let session = NetlinkSession(socket: socket, log: log)
-            try session.linkSet(interface: request.interface, up: request.up)
+            let mtuValue: UInt32? = request.hasMtu ? request.mtu : nil
+            try session.linkSet(interface: request.interface, up: request.up, mtu: mtuValue)
         } catch {
             log.error(
                 "ip-link-set",
