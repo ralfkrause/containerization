@@ -18,9 +18,8 @@ import ContainerizationIO
 import ContainerizationOS
 import Foundation
 import Logging
-import SendableProperty
 
-final class VsockProxy: Sendable {
+actor VsockProxy {
     enum Action {
         case listen
         case dial
@@ -54,9 +53,8 @@ final class VsockProxy: Sendable {
     private let udsPerms: UInt32?
     private let log: Logger?
 
-    @SendableProperty
     private var listener: Socket?
-    private let task = Mutex<Task<(), Never>?>(nil)
+    private var task: Task<(), Never>?
 }
 
 extension VsockProxy {
@@ -70,11 +68,14 @@ extension VsockProxy {
         if fm.fileExists(atPath: self.path.path) {
             try FileManager.default.removeItem(at: self.path)
         }
-        let task = task.withLock { $0 }
         task?.cancel()
+        self.listener = nil
     }
 
     func start() throws {
+        guard listener == nil else {
+            return
+        }
         switch self.action {
         case .dial:
             try dialHost()
@@ -140,7 +141,7 @@ extension VsockProxy {
                 self.log?.error("failed to accept connection: \(error)")
             }
         }
-        self.task.withLock { $0 = task }
+        self.task = task
     }
 
     private func handleConn(
